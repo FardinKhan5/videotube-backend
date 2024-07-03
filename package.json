@@ -2,9 +2,10 @@
   "name": "backend-project",
   "version": "1.0.0",
   "description": "a practice project from chai aur code backend series",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev":"nodemon /src/index.js"
   },
   "keywords": [
     "javascript",
@@ -13,5 +14,8 @@
     "express"
   ],
   "author": "fardin khan",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "prettier": "^3.3.2"
+  }
 }
