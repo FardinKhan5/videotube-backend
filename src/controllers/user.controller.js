@@ -3,6 +3,7 @@ import { ApiError } from "../utills/ApiError.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utills/cloudinary.js"
 import { ApiResponse } from "../utills/ApiResponse.js"
+import fs from "fs"
 const registerUser = asyncHandler(async (req, res, next) => {
     // get user details from frontend
     // validation - not empty
@@ -22,22 +23,33 @@ const registerUser = asyncHandler(async (req, res, next) => {
     const isUserAlreadyExists = await User.findOne({
         $or:[{userName},{email}]
     })
-    
-    if (!isUserAlreadyExists) {
-        throw new ApiError(409, "User with email or esername already existed")
+
+    if (isUserAlreadyExists) {
+        if(req.files.avatar[0].path){
+            fs.unlinkSync(req.files?.avatar[0]?.path)
+        }
+        if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
+            fs.unlinkSync(req.files.coverImage[0].path)
+        }
+        throw new ApiError(409, "User with email or uesername already existed")
     }
 
     const avatarLocalPath=req.files?.avatar[0]?.path
-    const coverImageLocalPath=req.files?.coverImage[0]?.path
+    // const coverImageLocalPath=req.files?.coverImage[0]?.path
 
     if(!avatarLocalPath){
         throw new ApiError(400,"Avatar file is required")
     }
 
+    let coverImageLocalPath
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
+        coverImageLocalPath=req.files.coverImage[0].path
+    }
+
     const avatar=await uploadOnCloudinary(avatarLocalPath)
     const coverImage=await uploadOnCloudinary(coverImageLocalPath)
 
-    const user=User.create({
+    const user=await User.create({
         userName: userName.toLowerCase() ,
         email,
         fullName,
@@ -46,13 +58,16 @@ const registerUser = asyncHandler(async (req, res, next) => {
         password
     })
     
-    const creaatedUser=User.findById(user._id).select("-password -refreshToken")
+    // const createdUser=await User.findById(user._id).select("-password -refreshToken") old
+    const createdUser=await User.findById(user._id).select("-password -refreshToken")
 
-    if(!creaatedUser){
+    if(!createdUser){
         throw new ApiError(500,"Something went wrong while registering the user")
     }
 
-    return res.status(200).json(new ApiResponse(200,"User is registered successfully", creaatedUser))
+    return res.status(201).json(
+        new ApiResponse(200,createdUser,"User is registered successfully")
+    )
 
 })
 
