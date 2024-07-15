@@ -4,7 +4,6 @@ import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utills/cloudinary.js"
 import { ApiResponse } from "../utills/ApiResponse.js"
 import fs from "fs"
-import cookieParser from "cookie-parser"
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -130,5 +129,23 @@ const loginUser = asyncHandler(async (req, res, next) => {
         )
 })
 
+const logoutUser = asyncHandler(async (req, res, next) => {
 
-export { registerUser }
+    await User.findByIdAndUpdate(req.user._id, {
+        $unset: { refreshToken: 1 }
+    }, {
+        new: true
+    })
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    res.status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, {}, "User logged out"))
+})
+
+export { registerUser, loginUser, logoutUser }
