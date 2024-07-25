@@ -111,7 +111,7 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(404, "User does not exists")
     }
 
-    const checkPassword = user.isPasswordCorrect(password)
+    const checkPassword = await user.isPasswordCorrect(password)
     if (!checkPassword) {
         throw new ApiError(401, "Invalid password")
     }
@@ -173,7 +173,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Refresh token expired or used")
     }
 
-    const { accessToken, newRefreshToken } = await generateAccessAndRefreshToken(user._id)
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
 
     const options = {
         httpOnly: true,
@@ -182,8 +182,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     res.status(200)
         .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", newRefreshToken, options)
-        .json(new ApiResponse(200, { accessToken, refreshToken: newRefreshToken }, "Acess token refreshed"))
+        .cookie("refreshToken", refreshToken, options)
+        .json(new ApiResponse(200, { accessToken, refreshToken }, "Acess token refreshed"))
 
 })
 
@@ -227,7 +227,8 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 })
 
 const updateUserAvater = asyncHandler(async (req, res) => {
-    const { avatarLocalPath } = req.file?.path
+    const avatarLocalPath = req.file?.path
+
     if (!avatarLocalPath) {
         throw new ApiError(40, "Avatar file is missing")
     }
@@ -242,10 +243,9 @@ const updateUserAvater = asyncHandler(async (req, res) => {
         $set: { avatar: avatar.url }
     }, {
         new: true
-    }).select("-password refreshToken")
+    }).select("-password -refreshToken")
 
     if (user.avatar) {
-        fs.unlinkSync(avatarLocalPath) //removing avatar file from local storage after updating
         await removeFromCloudinary(oldAvatar)
     }
 
@@ -254,7 +254,7 @@ const updateUserAvater = asyncHandler(async (req, res) => {
 })
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-    const { coverImageLocalPath } = req.file?.path
+    const coverImageLocalPath = req.file?.path
     if (!coverImageLocalPath) {
         throw new ApiError(400, "Cover image file is missing")
     }
@@ -263,16 +263,15 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     if (!coverImage.url) {
         throw new ApiError(400, "Something went wrong while uploading avatar on cloud")
     }
-    const oldCoverImage = req.user.coverImage
+    const oldCoverImage = req.user?.coverImage
     const user = await User.findByIdAndUpdate(req.user?._id, {
         $set: { coverImage: coverImage.url }
     }, {
         new: true
-    }).select("-password refreshToken")
+    }).select("-password -refreshToken")
 
-    if (user.coverImage) {
+    if (user.coverImage && oldCoverImage) {
         await removeFromCloudinary(oldCoverImage)
-        fs.unlinkSync(coverImageLocalPath) //removing cover image file from local storage after updating
     }
 
     res.status(200).json(new ApiResponse(200, user, "Cover image image updated successfully"))
@@ -361,13 +360,15 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                             as: "owner",
                             localField: "owner",
                             foreignField: "_id",
-                            pipeline: {
-                                $project: {
-                                    fullName: 1,
-                                    userName: 1,
-                                    avatar: 1
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        userName: 1,
+                                        avatar: 1
+                                    }
                                 }
-                            }
+                            ]
                         }
                     }
                 ]
