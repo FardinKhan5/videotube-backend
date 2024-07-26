@@ -1,11 +1,13 @@
 import express from "express"
 import { verifyJWT } from "../middlewares/auth.middleware.js"
-import { updateViewsAndHistory, deleteVideo, getVideoById, publishAVideo, togglePublishStatus, updateVideo } from "../controllers/video.controller.js"
+import { updateViewsAndHistory, deleteVideo, getVideoById, publishAVideo, togglePublishStatus, updateVideo, getAllVideos } from "../controllers/video.controller.js"
 import { upload } from "../middlewares/multer.middleware.js"
 const router=express.Router()
 
 router.use(verifyJWT)
 
+
+router.route("/").get(getAllVideos)
 router.route("/publish").post(upload.fields([
     {
         name:"thumbnail",

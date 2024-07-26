@@ -3,27 +3,60 @@ import { ApiError } from "../utills/ApiError.js"
 import { removeFromCloudinary, uploadOnCloudinary } from "../utills/cloudinary.js"
 import { ApiResponse } from "../utills/ApiResponse.js"
 import { Video } from "../models/video.model.js"
-import fs from "fs"
 import { User } from "../models/user.model.js"
+import mongoose from "mongoose"
 const getAllVideos = asyncHandler(async (req, res) => {
     // const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    const { page = 1, limit = 10, query = "", sortBy = "createdAt", sortType = 1, userId } = req.query
-    //pending
-    const videos = await Video.aggregate([
-        {
-            $match: {
-                owner: req.user?._id
+    const { channelId, page = 1, limit = 1, query = "", sortBy = "createdAt", sortType = 1 } = req.query
+    if(!channelId && !query){
+        throw new ApiError(400,"Channel Id or Query is required")
+    }
+    const options = {
+        page: page,
+        limit: limit
+    };
+    let matchStage={}
+    if(query && !channelId){
+        matchStage={title:{$regex:query,$options:"i"}}
+        console.log("hello")
+    }else if(query && channelId){
+        matchStage=matchStage={
+            owner:new mongoose.Types.ObjectId(channelId),
+            $or:[
+                {title:{$regex:query,$options:"i"}}
+            ]
+        }
+    }else{
+        matchStage={owner:new mongoose.Types.ObjectId(channelId)}
+    }
+    const sortStage={}
+    sortStage[sortBy]=Number.parseInt(sortType)
+    const videos=await Video.aggregatePaginate(
+        [
+            {
+                $match: matchStage
+            },
+            {
+                $sort:sortStage
             }
-        },
-        {
-            $lookup: {
-                from: "users",
-                as: "userDetails",
-                localField: "owner",
-                foreignField: "_id",
+        ],
+        options,
+        function (err,results){
+            if(err){
+                console.error(err)
+            }else{
+                return results
             }
         }
-    ])
+    )
+
+
+    if (!videos) {
+        throw new ApiError(400, "Error while fetching videos")
+    }
+
+    res.status(200).json(new ApiResponse(200, videos, "Videos fetched successfully"))
+
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -184,6 +217,7 @@ const updateViewsAndHistory = asyncHandler(async (req, res) => {
 
 
 export {
+    getAllVideos,
     publishAVideo,
     getVideoById,
     updateVideo,
