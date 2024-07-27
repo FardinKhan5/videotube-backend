@@ -15,7 +15,7 @@ const createTweet = asyncHandler(async (req, res) => {
         content
     })
     if (!tweet) {
-        throw new ApiError(400, "Error while creating tweet")
+        throw new ApiError(500, "Error while creating tweet")
     }
     res.status(200).json(new ApiResponse(200, tweet, "Tweeted successfully"))
 })
@@ -53,7 +53,7 @@ const updateTweet = asyncHandler(async (req, res) => {
     })
 
     if (!tweet) {
-        throw new ApiError(400, "Error while updating the tweet")
+        throw new ApiError(500, "Error while updating the tweet")
     }
 
     res.status(200).json(new ApiResponse(200, tweet, "Tweet updated successfully"))
