@@ -7,7 +7,7 @@ import { User } from "../models/user.model.js"
 import mongoose from "mongoose"
 const getAllVideos = asyncHandler(async (req, res) => {
     // const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    const { channelId, page = 1, limit = 1, query = "", sortBy = "createdAt", sortType = 1 } = req.query
+    const { channelId, page = 1, limit = 10, query = "", sortBy = "createdAt", sortType = 1 } = req.query
     if(!channelId && !query){
         throw new ApiError(400,"Channel Id or Query is required")
     }
@@ -17,29 +17,63 @@ const getAllVideos = asyncHandler(async (req, res) => {
     };
     let matchStage={}
     if(query && !channelId){
-        matchStage={title:{$regex:query,$options:"i"}}
-        console.log("hello")
+        matchStage={title:{$regex:query,$options:"i"},isPublished:true}
     }else if(query && channelId){
         matchStage=matchStage={
             owner:new mongoose.Types.ObjectId(channelId),
             $or:[
                 {title:{$regex:query,$options:"i"}}
-            ]
+            ],
+            isPublished:true
         }
     }else{
-        matchStage={owner:new mongoose.Types.ObjectId(channelId)}
+        matchStage={owner:new mongoose.Types.ObjectId(channelId),isPublished:true}
     }
+
     const sortStage={}
     sortStage[sortBy]=Number.parseInt(sortType)
     const videos=await Video.aggregatePaginate(
         [
             {
-                $match: matchStage
+              $match: matchStage
+            },
+            {
+              $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "channel"
+              }
+            },
+            {
+              $unwind: {
+                path: "$channel"
+              }
+            },
+            {
+              $project: {
+                videoFile: 1,
+                thumbnail: 1,
+                owner: 1,
+                title: 1,
+                description: 1,
+                duration: 1,
+                views: 1,
+                isPublished: 1,
+                channel: {
+                  userName: "$channel.userName",
+                  fullName: "$channel.fullName",
+                  avatar: "$channel.avatar",
+                  channelId: "$channel._id"
+                },
+                createdAt: 1,
+                updatedAt: 1
+              }
             },
             {
                 $sort:sortStage
             }
-        ],
+          ],
         options,
         function (err,results){
             if(err){

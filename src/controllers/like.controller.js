@@ -19,7 +19,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200,like,"Liked video successfully"))
     }
 
-    like=await Like.findOne({video:videoId})
+    like=await Like.findOne({video:videoId,likedBy:req.user?._id})
     if(!like){
         like=await Like.findOneAndUpdate({likedBy:req.user?._id},{
             $push:{video:videoId}
@@ -44,6 +44,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid comment id")
     }
     let like=await Like.findOne({likedBy:req.user?._id})
+
     if(!like){
         like=await Like.create({
             comment:commentId,
@@ -52,7 +53,8 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200,like,"Liked comment successfully"))
     }
 
-    like=await Like.findOne({comment:commentId})
+    like=await Like.findOne({comment:commentId,likedBy:req.user?._id})
+
     if(!like){
         like=await Like.findOneAndUpdate({likedBy:req.user?._id},{
             $push:{comment:commentId}
@@ -86,7 +88,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200,like,"Liked tweet successfully"))
     }
 
-    like=await Like.findOne({tweet:tweetId})
+    like=await Like.findOne({tweet:tweetId,likedBy:req.user?._id})
     if(!like){
         like=await Like.findOneAndUpdate({likedBy:req.user?._id},{
             $push:{tweet:tweetId}
