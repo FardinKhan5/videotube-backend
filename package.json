@@ -1,11 +1,12 @@
 {
   "name": "backend-project",
   "version": "1.0.0",
-  "description": "a practice project from chai aur code backend series",
+  "description": "videotube backend- A online video sharing web app",
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon ./src/index.js"
+    "dev": "nodemon ./src/index.js",
+    "start": "node ./src/index.js"
   },
   "keywords": [
     "javascript",
